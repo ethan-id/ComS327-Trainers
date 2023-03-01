@@ -1,0 +1,92 @@
+
+heap.c,489
+#define LEFT_CHILD(14,249
+#define RIGHT_CHILD(15,284
+#define PARENT_ENTRY(16,319
+#define SWAP_ENTRIES(17,354
+#define GET_ENTRY(26,874
+static int ENTRIES_PER_PAGE 38,1124
+static int PAGE_SIZE 44,1227
+static void* map_in_pages(49,1386
+static void map_out_pages(69,1880
+int compare_int_keys(83,2236
+void heap_create(99,2602
+void heap_destroy(134,3637
+int heap_size(149,3930
+int heap_min(156,4050
+void heap_insert(174,4409
+int heap_delmin(245,6408
+void heap_foreach(363,10148
+
+heap.h,332
+#define HEAP_H8,104
+typedef struct heap_entry 11,157
+    void* key;12,185
+    void* value;13,224
+} heap_entry;14,265
+typedef struct heap 18,322
+    int (*compare_func)compare_func19,344
+    int active_entries;20,421
+    int minimum_pages;21,483
+    int allocated_pages;22,578
+    heap_entry* table;23,655
+} heap;24,727
+
+trainers.c,1637
+const int INFINITY_T 9,134
+const int NUM_VERTICES 10,169
+typedef struct position 12,212
+    int rowPos;13,238
+    int colPos;14,254
+} position_t;15,270
+    Up 18,300
+    Up = 1, Down 18,300
+    Up = 1, Down = 2, Left 18,300
+    Up = 1, Down = 2, Left = 3, Right 18,300
+} direction_t;19,342
+typedef struct character 21,358
+    char npc;22,385
+    char value[value23,399
+    direction_t direction;24,419
+    position_t position;25,446
+    long int nextMoveTime;26,471
+    char spawn;27,498
+} character_t;28,514
+typedef struct squares 30,530
+    int rowPos;31,555
+    int colPos;32,571
+    int cost;33,587
+    char terrain;34,601
+} squares_t;35,619
+typedef struct player 38,634
+    int rowPos;39,658
+    int colPos;40,674
+} player_t;41,690
+typedef struct terrainMap 43,703
+    player_t player;44,731
+    int northSouthExit;45,752
+    int westEastExit;46,776
+    int worldRow;47,798
+    int worldCol;48,816
+    char terrain[terrain49,834
+    position_t roadPositions[roadPositions50,860
+} terrainMap_t;51,906
+struct terrainMap *world[world53,923
+int decorateTerrain(55,960
+int generateBuildings(71,1360
+int generatePaths(100,2241
+int checkSurroundingsForChar(136,3291
+void generateWater(150,3623
+void generateTallGrass(178,4490
+void generateExits(218,5704
+void placeCharacter(241,6598
+void populateHikerCosts(250,6911
+void populateRivalCosts(283,8085
+void dijkstra(311,9029
+void findPath(378,11471
+int positionOccupied(435,13296
+void displayMap(446,13550
+void findPosition(483,14718
+void generateTrainers(537,17195
+struct terrainMap * generateTerrain(717,26114
+int main(760,27397

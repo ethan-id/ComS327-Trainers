@@ -20,3 +20,10 @@
         TO-DO
             Handle moving trainers upon dequeue
             Handle reinserting trainers into queue based on time
+2/29
+    2:36am-3:15am
+        Got npc heap to start dequeueing things sort of correctly again, trying to figure out how to reinsert them after 'moving' them (for now just printing something) but not going quite so simply
+    7:25am-
+
+        TO-DO
+            Fix placing of trainers to not allow them to spawn on buildings.

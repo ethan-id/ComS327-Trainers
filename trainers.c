@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include "heap.h"
 
-const int INFINITY_T = 9999;
+const int INFINITY_T = 2147483640;
 const int NUM_VERTICES = 1680; // 21 * 80
 
 typedef struct position {
@@ -15,13 +15,14 @@ typedef struct position {
 } position_t;
 
 typedef enum {
-    Rival, Hiker, Pacer, Wanderer, Sentry, Explorer, Swimmer, Player
-} npcOptions_t;
+    Up = 1, Down = 2, Left = 3, Right = 4
+} direction_t;
 
 typedef struct character {
-    npcOptions_t npc;
+    char npc;
+    char value[20];
+    direction_t direction;
     position_t position;
-    position_t spawnPos;
     long int nextMoveTime;
     char spawn;
 } character_t;
@@ -374,11 +375,11 @@ void dijkstra(char map[21][80], squares_t squares[21][80], player_t source) {
     heap_destroy(&h);
 }
 
-void findPath(terrainMap_t *terrainMap, npcOptions_t chosenNPC) {
+void findPath(terrainMap_t *terrainMap, char chosenNPC) {
     int i, j;
     squares_t rivalSquares[21][80], hikerSquares[21][80];
 
-    if(chosenNPC == Rival) {
+    if(chosenNPC == 'r') {
         for(i = 0; i < 21; i++) {
             for(j = 0; j < 80; j++) {
                 rivalSquares[i][j].rowPos = i;
@@ -404,7 +405,7 @@ void findPath(terrainMap_t *terrainMap, npcOptions_t chosenNPC) {
         // }
     }
     
-    if(chosenNPC == Hiker) {
+    if(chosenNPC == 'h') {
         for(i = 0; i < 21; i++) {
             for(j = 0; j < 80; j++) {
                 hikerSquares[i][j].rowPos = i;
@@ -454,34 +455,9 @@ void displayMap(terrainMap_t *terrainMap, int numTrainers, character_t *trainers
         for (j = 0; j < 80; j++) {
             charToPrint = terrainMap->terrain[i][j];
             for (k = 0; k < numTrainers; k++) {
-                if (i == trainers[k]->position.rowPos && j == trainers[k]->position.colPos && trainers[k]->npc != Player) {
+                if (i == trainers[k]->position.rowPos && j == trainers[k]->position.colPos && trainers[k]->npc != '@') {
                     // charToPrint = trainers[k]->spawn;
-                    switch(trainers[k]->npc) {
-                        case Player :
-                            charToPrint = '@';
-                            break;
-                        case Rival :
-                            charToPrint = 'r';
-                            break;
-                        case Hiker :
-                            charToPrint = 'h';
-                            break;
-                        case Pacer :
-                            charToPrint = 'p';
-                            break;
-                        case Wanderer :
-                            charToPrint = 'w';
-                            break;
-                        case Sentry :
-                            charToPrint = 's';
-                            break;
-                        case Explorer :
-                            charToPrint = 'e';
-                            break;
-                        case Swimmer :
-                            charToPrint = 'm';
-                            break;
-                    }
+                    charToPrint = trainers[k]->npc;
                 }
             }
             if(i == terrainMap->player.rowPos && j == terrainMap->player.colPos) {
@@ -513,9 +489,9 @@ void findPosition(character_t *trainer, terrainMap_t *terrainMap, int numTrainer
     pos.colPos = col;
 
     switch(trainer->npc) {
-            case Player :
+            case '@' :
                 break;
-            case Swimmer :
+            case 'm' : // is a swimmer
                 // pick random position that has not been chosen before and is water
                 while(terrainMap->terrain[row][col] != '~'
                 || positionOccupied(numTrainers, *positionsUsed, pos)) {
@@ -525,19 +501,20 @@ void findPosition(character_t *trainer, terrainMap_t *terrainMap, int numTrainer
                 // mark trainer position
                 trainer->position.rowPos = row;
                 trainer->position.colPos = col;
+                // printf("Placed %c at [%d, %d]\n", trainer->npc, row, col);
                 // add position to positionsUsed
                 positionsUsed[positionsMarked]->rowPos = row;
                 positionsUsed[positionsMarked]->colPos = col;
                 
                 positionsMarked++;
                 break;
-            default :
+            default : // is any other type of npc
                 // pick random position that has not been chosen before and is not a boulder, tree, water, or building
                 while(terrainMap->terrain[row][col] == '%'
                 || terrainMap->terrain[row][col] == '^'
                 || terrainMap->terrain[row][col] == '~'
                 || terrainMap->terrain[row][col] == 'M'
-                || terrainMap->terrain[row][col] == 'N'
+                || terrainMap->terrain[row][col] == 'C'
                 || positionOccupied(numTrainers, *positionsUsed, pos)) {
                     col = (rand() % (70 - 10)) + 10;
                     row = (rand() % (16 - 3)) + 3;
@@ -545,6 +522,7 @@ void findPosition(character_t *trainer, terrainMap_t *terrainMap, int numTrainer
                 // mark trainer position
                 trainer->position.rowPos = row;
                 trainer->position.colPos = col;
+                // printf("Placed %c at [%d, %d]\n", trainer->npc, row, col);
                 // for wanderers to know what terrain they spawned in
                 trainer->spawn = terrainMap->terrain[row][col];
                 // add position to positionsUsed
@@ -556,6 +534,23 @@ void findPosition(character_t *trainer, terrainMap_t *terrainMap, int numTrainer
         }
 }
 
+int getMoveCost(terrainMap_t *terrainMap, int row, int pos, char npc) {
+    switch(npc) {
+        case 'h' :
+
+            break;
+        case 'r' :
+
+            break;
+        case 'm' :
+
+            break;
+        default :
+
+            break;
+    }
+}
+
 void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
     // pick random assortment of trainers, including at least one hiker and one rival
     // unless numTrainers < 2
@@ -564,93 +559,173 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
     numTrainers++;
 
     character_t *trainers[numTrainers];
-    npcOptions_t trainerOptions[7] = {Rival, Hiker, Pacer, Wanderer, Sentry, Explorer, Swimmer};
-    heap characterHeap;
-    heap_create(&characterHeap, numTrainers * 2, NULL);
+    char trainerOptions[7] = {'r', 'h', 'p', 'w', 's', 'e', 'm'};
 
     for (i = 0; i < numTrainers; i++) {
         trainers[i] = malloc(sizeof(*trainers[i]));
     }
 
+    // Fill up trainers[] with random npcs, guaranteeing the first to be a hiker and the second to be a rival, rest are random
     for (i = 0; i < numTrainers - 1; i++) {
         if (i == 0) {
-            trainers[i]->npc = Hiker;
-            trainers[i]->nextMoveTime = time(NULL);
-            heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+            trainers[i]->npc = 'h';
+            trainers[i]->nextMoveTime = 0;
         } else if (i == 1) {
-            trainers[i]->npc = Rival;
-            trainers[i]->nextMoveTime = time(NULL);
-            heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+            trainers[i]->npc = 'r';
+            trainers[i]->nextMoveTime = 0;
         } else {
             trainers[i]->npc = trainerOptions[rand() % 7];
-            trainers[i]->nextMoveTime = time(NULL);
-            heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+            trainers[i]->nextMoveTime = 0;
+            // heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]);
         }
     }
     
-    trainers[numTrainers - 1]->npc = Player;
-    trainers[numTrainers - 1]->nextMoveTime = time(NULL);
-    heap_insert(&characterHeap, &trainers[numTrainers - 1]->nextMoveTime, &trainers[numTrainers - 1]->npc);
+    // Player for the queue to allow the user a turn to move and to redraw the map
+    trainers[numTrainers - 1]->npc = '@';
+    trainers[numTrainers - 1]->position.rowPos = terrainMap->player.rowPos;
+    trainers[numTrainers - 1]->position.colPos = terrainMap->player.colPos;
+    trainers[numTrainers - 1]->nextMoveTime = 0;
 
-    // place all trainers
+
+    // Place all trainers and give pacers, wanderers, and explorers, a random direction to start with
+    direction_t directionOptions[4] = {Up, Down, Left, Right};
     position_t *positionsUsed[numTrainers];
     for (i = 0; i < numTrainers; i++) {
         positionsUsed[i] = malloc(sizeof(*positionsUsed[i]));
         findPosition(trainers[i], terrainMap, numTrainers, positionsUsed);
+
+        // Build value string to use in heap
+        snprintf(trainers[i]->value, sizeof(trainers[i]->value), "%c %d", trainers[i]->npc, i);
+
+        if (trainers[i]->npc == 'w' || trainers[i]->npc == 'p' || trainers[i]->npc == 'e') {
+            trainers[i]->direction = directionOptions[rand() % 4];
+        }
     }
 
+    // Insert trainers into queue
+    heap characterHeap;
+    heap_create(&characterHeap, 9999, NULL);
+    for (i = 0; i < numTrainers; i++) {
+        heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->value);
+    }
+
+    // While the queue of trainers isn't empty, dequeue the trainer with the cheapest next move, make the move, 
+    //  then reinsert with old cost + next move cost
     heap_entry u;
-    while(heap_size(&characterHeap) > 0) {
+    while(heap_delmin(&characterHeap, &u.key, &u.value)) {
         // move the things
-        heap_delmin(&characterHeap, &u.key, &u.value);
+        char value[20];
+        char *npc;
+        char *index;
+        // char *spawn;
 
-        npcOptions_t *currentCharacter = u.value;
-        // long int *nextMoveTime = u.key;
+        // Deconstruct Value String
+        strcpy(value, u.value);
+        npc = strtok(value, " ");
+        index = strtok(NULL, " ");
 
-        switch(*currentCharacter) {
-            case Player :
-                // printf("Moved Player, %ld\n", *nextMoveTime);
+        int i = atoi(index);
+
+        switch(trainers[i]->npc) {
+            case '@' :
+                // handle player movement in 1.05
+                printf("Moved Player\n");
+                usleep(250000);
+                displayMap(terrainMap, numTrainers, trainers);
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Rival :
-                // printf("Moved Rival, %ld\n", *nextMoveTime);
+            case 'r' :
+                // path to player
+                printf("Moved Rival\n");
+                findPath(terrainMap, 'r');
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Hiker :
-                // printf("Moved Hiker, %ld\n", *nextMoveTime);
+            case 'h' :
+                // path to player
+                printf("Moved Hiker\n");
+                findPath(terrainMap, 'h');
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Pacer :
-                // printf("Moved Pacer, %ld\n", *nextMoveTime);
+            case 'p' :
+                // move in direction until not possible then flip around
+                if (trainers[i]->direction == Left) {
+                    if (terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != 'C') {
+                        trainers[i]->position.colPos--;
+                    } else {
+                        trainers[i]->direction = Right;
+                    }
+                }
+                if (trainers[i]->direction == Right) {
+                    // move left if possible
+                    if (terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != 'C') {
+                        trainers[i]->position.colPos++;
+                    } else {
+                        trainers[i]->direction = Left;
+                    }
+                }
+                if (trainers[i]->direction == Down) {
+                    // move left if possible
+                    if (terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != 'C') {
+                        trainers[i]->position.rowPos++;
+                    } else {
+                        trainers[i]->direction = Up;
+                    }
+                }
+                if (trainers[i]->direction == Up) {
+                    // move left if possible
+                    if (terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != 'C') {
+                        trainers[i]->position.rowPos--;
+                    } else {
+                        trainers[i]->direction = Down;
+                    }
+                }
+                printf("Moved Pacer\n");
+                displayMap(terrainMap, numTrainers, trainers);
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Wanderer :
-                // printf("Moved Wanderer, %ld\n", *nextMoveTime);
+            case 'w' :
+                // move in direction until reach edge of spawn terrain then walk in random new direction
+                printf("Moved Wanderer\n");
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Sentry :
+            case 's' :
                 // Sentries don't move
-                // printf("Moved Sentry, %ld\n", *nextMoveTime);
+                printf("Moved Sentry\n");
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Explorer :
-                // printf("Moved Explorer, %ld\n", *nextMoveTime);
+            case 'e' :
+                // move in direction until reach impassable terrain (boulder, tree, building, or water) then walk in random new direction
+                printf("Moved Explorer\n");
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
-            case Swimmer :
-                // printf("Moved Swimmer, %ld\n", *nextMoveTime);
+            case 'm' :
+                // move in direction until reach edge of spawn terrain then walk in random new direction
+                // if player is cardinally adjacent/on edge of water directly north, south, west, or east, move towards player
+                printf("Moved Swimmer\n");
+                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
                 break;
             default :
                 break;
         }
 
-        // *nextMoveTime = time(NULL);
-        if (*currentCharacter == Player) {
-            // usleep(500000);
-            // *nextMoveTime = 10;
-        }
-
-        // heap_insert(&characterHeap, &nextMoveTime, &currentCharacter);
         // printf("Inserted\n");
     }
-    displayMap(terrainMap, numTrainers, trainers);
-    
-    // for (i = 0; i <= numTrainers; i++) {
-    //     free(trainers[i]);
-    // }
 
     heap_destroy(&characterHeap);
 }
