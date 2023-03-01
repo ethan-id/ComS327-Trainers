@@ -65,7 +65,7 @@ int heap_min(heap* h, void** key, void** value);
  * @param h Pointer to the heap structure
  * @param key A pointer to a pointer, to set to the minimum key
  * @param valu Set to the value corresponding with the key
- * @return 1if the minimum element exists and is deleted, 0 if there are no elements.
+ * @return 1 if the minimum element exists and is deleted, 0 if there are no elements.
  */
 int heap_delmin(heap* h, void** key, void** value);
 

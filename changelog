@@ -1,1 +1,9 @@
 2/28
+    7:32-7:40am
+        Initialized repo, updated output to not display distance maps for hikers and rivals.
+        Added some logic to handle --numtrainers, updated generateTerrain to take a parameter numTrainers.
+    7:41am-8:21am
+        Added generateTrainers() which is now creating an array of the trainers to be be generated
+            Guarantees a hiker and rival if numTrainers > 2
+    6:00pm-7:56pm
+        generateTrainers() now adds all the npcs and player into a queue and removes them once to move them

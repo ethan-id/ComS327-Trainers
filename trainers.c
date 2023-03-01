@@ -3,14 +3,26 @@
 #include <time.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 #include "heap.h"
 
 const int INFINITY_T = 9999;
 const int NUM_VERTICES = 1680; // 21 * 80
 
-enum npc {
-    Rival, Hiker
-};
+typedef struct position {
+    int rowPos;
+    int colPos;
+} position_t;
+
+typedef enum {
+    Rival, Hiker, Pacer, Wanderer, Sentry, Explorer, Swimmer, Player
+} npcOptions_t;
+
+typedef struct character {
+    npcOptions_t npc;
+    position_t position;
+    long int nextMoveTime;
+} character_t;
 
 typedef struct squares {
     int rowPos;
@@ -19,10 +31,6 @@ typedef struct squares {
     char terrain;
 } squares_t;
 
-typedef struct position {
-    int rowPos;
-    int colPos;
-} position_t;
 
 typedef struct player {
     int rowPos;
@@ -364,7 +372,7 @@ void dijkstra(char map[21][80], squares_t squares[21][80], player_t source) {
     heap_destroy(&h);
 }
 
-void findPath(terrainMap_t *terrainMap, enum npc chosenNPC) {
+void findPath(terrainMap_t *terrainMap, npcOptions_t chosenNPC) {
     int i, j;
     squares_t rivalSquares[21][80], hikerSquares[21][80];
 
@@ -421,6 +429,96 @@ void findPath(terrainMap_t *terrainMap, enum npc chosenNPC) {
     }
 }
 
+void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
+    // pick random assortment of trainers, including at least one hiker and one rival
+    // unless numTrainers < 2
+    int i;
+    // make room for player
+    numTrainers++;
+
+    character_t *trainers[numTrainers];
+    npcOptions_t trainerOptions[7] = {Rival, Hiker, Pacer, Wanderer, Sentry, Explorer, Swimmer};
+    heap characterHeap;
+    heap_create(&characterHeap, numTrainers * 2, NULL);
+
+    for (i = 0; i < numTrainers; i++) {
+        trainers[i] = malloc(sizeof(*trainers[i]));
+    }
+
+    for (i = 0; i < numTrainers - 1; i++) {
+        if (i == 0) {
+            trainers[i]->npc = Hiker;
+            trainers[i]->nextMoveTime = time(NULL);
+            heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+        } else if (i == 1) {
+            trainers[i]->npc = Rival;
+            trainers[i]->nextMoveTime = time(NULL);
+            heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+        } else {
+            trainers[i]->npc = trainerOptions[rand() % 7];
+            trainers[i]->nextMoveTime = time(NULL);
+            heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+        }
+    }
+    
+    trainers[numTrainers - 1]->npc = Player;
+    trainers[numTrainers - 1]->nextMoveTime = time(NULL);
+    heap_insert(&characterHeap, &trainers[numTrainers - 1]->nextMoveTime, &trainers[numTrainers - 1]->npc);
+
+    heap_entry u;
+    while(heap_size(&characterHeap) > 0) {
+        // move the things
+        heap_delmin(&characterHeap, &u.key, &u.value);
+
+        npcOptions_t *currentCharacter = u.value;
+        long int *nextMoveTime = u.key;
+
+        switch(*currentCharacter) {
+            case Player :
+                printf("Moved Player, %ld\n", *nextMoveTime);
+                break;
+            case Rival :
+                printf("Moved Rival, %ld\n", *nextMoveTime);
+                break;
+            case Hiker :
+                printf("Moved Hiker, %ld\n", *nextMoveTime);
+                break;
+            case Pacer :
+                printf("Moved Pacer, %ld\n", *nextMoveTime);
+                break;
+            case Wanderer :
+                printf("Moved Wanderer, %ld\n", *nextMoveTime);
+                break;
+            case Sentry :
+                printf("Moved Sentry, %ld\n", *nextMoveTime);
+                break;
+            case Explorer :
+                printf("Moved Explorer, %ld\n", *nextMoveTime);
+                break;
+            case Swimmer :
+                printf("Moved Swimmer, %ld\n", *nextMoveTime);
+                break;
+            default :
+                break;
+        }
+
+        // *nextMoveTime = time(NULL);
+        if (*currentCharacter == Player) {
+            usleep(500000);
+            // *nextMoveTime = 10;
+        }
+
+        // heap_insert(&characterHeap, &nextMoveTime, &currentCharacter);
+        // printf("Inserted\n");
+    }
+    
+    // for (i = 0; i <= numTrainers; i++) {
+    //     free(trainers[i]);
+    // }
+
+    heap_destroy(&characterHeap);
+}
+
 void displayMap(terrainMap_t *terrainMap) {
     int i, j;
     int northMult = 1;
@@ -451,9 +549,9 @@ void displayMap(terrainMap_t *terrainMap) {
     printf("Coords: %d%c %d%c\n", (terrainMap->worldRow - 200) * northMult, ns, (terrainMap->worldCol - 200) * westMult, ew);
 }
 
-struct terrainMap * generateTerrain(int *a, int *b, int firstGeneration) {
+struct terrainMap * generateTerrain(int *a, int *b, int firstGeneration, int numTrainers) {
     srand(time(NULL));
-
+    
     struct terrainMap *terrainMap = malloc(sizeof(*terrainMap));
 
     terrainMap->worldRow = *a;
@@ -488,8 +586,9 @@ struct terrainMap * generateTerrain(int *a, int *b, int firstGeneration) {
     decorateTerrain(terrainMap->terrain);
     placeCharacter(terrainMap);
     displayMap(terrainMap);
-    findPath(terrainMap, Rival);
-    findPath(terrainMap, Hiker);
+    generateTrainers(terrainMap, numTrainers);
+    // findPath(terrainMap, Rival);
+    // findPath(terrainMap, Hiker);
 
     return terrainMap;
 }
@@ -503,9 +602,18 @@ int main(int argc, char *argv[]) {
     char *flyCol;
     int currWorldRow = 200;
     int currWorldCol = 200;
-    
-    world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 1);
+    int numTrainers = 5; // Default number of trainers
 
+    // If the user passed --numtrainers
+    if(argv[1]) {
+        if (strcmp(argv[1], "--numtrainers") == 0) {
+            // Generate terrain with the number they passed
+            numTrainers = atoi(argv[2]);
+        }
+    }
+    
+    world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 1, numTrainers);
+    
     while (!quit) {
         printf("~: ");
 
@@ -552,7 +660,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (world[currWorldRow][currWorldCol] == NULL) {
-            world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 0);
+            world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 0, numTrainers);
         } else if (!quit){
             displayMap(world[currWorldRow][currWorldCol]);
         }
