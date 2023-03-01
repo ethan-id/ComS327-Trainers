@@ -7,3 +7,16 @@
             Guarantees a hiker and rival if numTrainers > 2
     6:00pm-7:56pm
         generateTrainers() now adds all the npcs and player into a queue and removes them once to move them
+    9:00pm-10:27pm
+        commented out code in main() so that input is no longer handled for the time being
+        added findPosition() to help give trainers positions
+            added positionOccupied() as a helper function to the helper function
+        TO-DO
+            Handle moving trainers upon dequeue
+            Handle reinserting trainers into queue based on time
+            need to update displayMap() to display trainers where they belong
+    10:27pm-10:47pm
+        Updated displayMap() to display trainer positions without overwriting terrain array
+        TO-DO
+            Handle moving trainers upon dequeue
+            Handle reinserting trainers into queue based on time

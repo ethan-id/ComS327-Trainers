@@ -21,7 +21,9 @@ typedef enum {
 typedef struct character {
     npcOptions_t npc;
     position_t position;
+    position_t spawnPos;
     long int nextMoveTime;
+    char spawn;
 } character_t;
 
 typedef struct squares {
@@ -429,6 +431,131 @@ void findPath(terrainMap_t *terrainMap, npcOptions_t chosenNPC) {
     }
 }
 
+int positionOccupied(int arrSize, position_t arr[arrSize], position_t pos) {
+    int i;
+
+    for (i = 0; i < arrSize; i++) {
+        if (arr[i].rowPos == pos.rowPos && arr[i].colPos == pos.colPos) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void displayMap(terrainMap_t *terrainMap, int numTrainers, character_t *trainers[numTrainers]) {
+    int i, j, k;
+    int northMult = 1;
+    int westMult = 1;
+    char charToPrint;
+    char ns = 'N';
+    char ew = 'E';
+
+    for (i = 0; i < 21; i++) {
+        for (j = 0; j < 80; j++) {
+            charToPrint = terrainMap->terrain[i][j];
+            for (k = 0; k < numTrainers; k++) {
+                if (i == trainers[k]->position.rowPos && j == trainers[k]->position.colPos && trainers[k]->npc != Player) {
+                    // charToPrint = trainers[k]->spawn;
+                    switch(trainers[k]->npc) {
+                        case Player :
+                            charToPrint = '@';
+                            break;
+                        case Rival :
+                            charToPrint = 'r';
+                            break;
+                        case Hiker :
+                            charToPrint = 'h';
+                            break;
+                        case Pacer :
+                            charToPrint = 'p';
+                            break;
+                        case Wanderer :
+                            charToPrint = 'w';
+                            break;
+                        case Sentry :
+                            charToPrint = 's';
+                            break;
+                        case Explorer :
+                            charToPrint = 'e';
+                            break;
+                        case Swimmer :
+                            charToPrint = 'm';
+                            break;
+                    }
+                }
+            }
+            if(i == terrainMap->player.rowPos && j == terrainMap->player.colPos) {
+                charToPrint = '@';
+            }
+            printf("%c", charToPrint);
+        }
+        printf("\n");
+    }
+
+    if (terrainMap->worldRow - 200 < 0) {
+        northMult = -1;
+        ns = 'S';
+    }
+    if (terrainMap->worldCol - 200 < 0) {
+        westMult = -1;
+        ew = 'W';
+    }
+
+    printf("Coords: %d%c %d%c\n", (terrainMap->worldRow - 200) * northMult, ns, (terrainMap->worldCol - 200) * westMult, ew);
+}
+
+void findPosition(character_t *trainer, terrainMap_t *terrainMap, int numTrainers, position_t *positionsUsed[numTrainers]) {
+    static int positionsMarked = 0;
+    int col = (rand() % (70 - 10)) + 10;
+    int row = (rand() % (16 - 3)) + 3;
+    position_t pos;
+    pos.rowPos = row;
+    pos.colPos = col;
+
+    switch(trainer->npc) {
+            case Player :
+                break;
+            case Swimmer :
+                // pick random position that has not been chosen before and is water
+                while(terrainMap->terrain[row][col] != '~'
+                || positionOccupied(numTrainers, *positionsUsed, pos)) {
+                    col = (rand() % (70 - 10)) + 10;
+                    row = (rand() % (16 - 3)) + 3;
+                }
+                // mark trainer position
+                trainer->position.rowPos = row;
+                trainer->position.colPos = col;
+                // add position to positionsUsed
+                positionsUsed[positionsMarked]->rowPos = row;
+                positionsUsed[positionsMarked]->colPos = col;
+                
+                positionsMarked++;
+                break;
+            default :
+                // pick random position that has not been chosen before and is not a boulder, tree, water, or building
+                while(terrainMap->terrain[row][col] == '%'
+                || terrainMap->terrain[row][col] == '^'
+                || terrainMap->terrain[row][col] == '~'
+                || terrainMap->terrain[row][col] == 'M'
+                || terrainMap->terrain[row][col] == 'N'
+                || positionOccupied(numTrainers, *positionsUsed, pos)) {
+                    col = (rand() % (70 - 10)) + 10;
+                    row = (rand() % (16 - 3)) + 3;
+                }
+                // mark trainer position
+                trainer->position.rowPos = row;
+                trainer->position.colPos = col;
+                // for wanderers to know what terrain they spawned in
+                trainer->spawn = terrainMap->terrain[row][col];
+                // add position to positionsUsed
+                positionsUsed[positionsMarked]->rowPos = row;
+                positionsUsed[positionsMarked]->colPos = col;
+                
+                positionsMarked++;
+                break;
+        }
+}
+
 void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
     // pick random assortment of trainers, including at least one hiker and one rival
     // unless numTrainers < 2
@@ -465,38 +592,46 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
     trainers[numTrainers - 1]->nextMoveTime = time(NULL);
     heap_insert(&characterHeap, &trainers[numTrainers - 1]->nextMoveTime, &trainers[numTrainers - 1]->npc);
 
+    // place all trainers
+    position_t *positionsUsed[numTrainers];
+    for (i = 0; i < numTrainers; i++) {
+        positionsUsed[i] = malloc(sizeof(*positionsUsed[i]));
+        findPosition(trainers[i], terrainMap, numTrainers, positionsUsed);
+    }
+
     heap_entry u;
     while(heap_size(&characterHeap) > 0) {
         // move the things
         heap_delmin(&characterHeap, &u.key, &u.value);
 
         npcOptions_t *currentCharacter = u.value;
-        long int *nextMoveTime = u.key;
+        // long int *nextMoveTime = u.key;
 
         switch(*currentCharacter) {
             case Player :
-                printf("Moved Player, %ld\n", *nextMoveTime);
+                // printf("Moved Player, %ld\n", *nextMoveTime);
                 break;
             case Rival :
-                printf("Moved Rival, %ld\n", *nextMoveTime);
+                // printf("Moved Rival, %ld\n", *nextMoveTime);
                 break;
             case Hiker :
-                printf("Moved Hiker, %ld\n", *nextMoveTime);
+                // printf("Moved Hiker, %ld\n", *nextMoveTime);
                 break;
             case Pacer :
-                printf("Moved Pacer, %ld\n", *nextMoveTime);
+                // printf("Moved Pacer, %ld\n", *nextMoveTime);
                 break;
             case Wanderer :
-                printf("Moved Wanderer, %ld\n", *nextMoveTime);
+                // printf("Moved Wanderer, %ld\n", *nextMoveTime);
                 break;
             case Sentry :
-                printf("Moved Sentry, %ld\n", *nextMoveTime);
+                // Sentries don't move
+                // printf("Moved Sentry, %ld\n", *nextMoveTime);
                 break;
             case Explorer :
-                printf("Moved Explorer, %ld\n", *nextMoveTime);
+                // printf("Moved Explorer, %ld\n", *nextMoveTime);
                 break;
             case Swimmer :
-                printf("Moved Swimmer, %ld\n", *nextMoveTime);
+                // printf("Moved Swimmer, %ld\n", *nextMoveTime);
                 break;
             default :
                 break;
@@ -504,49 +639,20 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
 
         // *nextMoveTime = time(NULL);
         if (*currentCharacter == Player) {
-            usleep(500000);
+            // usleep(500000);
             // *nextMoveTime = 10;
         }
 
         // heap_insert(&characterHeap, &nextMoveTime, &currentCharacter);
         // printf("Inserted\n");
     }
+    displayMap(terrainMap, numTrainers, trainers);
     
     // for (i = 0; i <= numTrainers; i++) {
     //     free(trainers[i]);
     // }
 
     heap_destroy(&characterHeap);
-}
-
-void displayMap(terrainMap_t *terrainMap) {
-    int i, j;
-    int northMult = 1;
-    int westMult = 1;
-    char ns = 'N';
-    char ew = 'E';
-
-    for (i = 0; i < 21; i++) {
-        for (j = 0; j < 80; j++) {
-            if(i == terrainMap->player.rowPos && j == terrainMap->player.colPos) {
-                printf("@");
-            } else {
-                printf("%c", terrainMap->terrain[i][j]);
-            }
-        }
-        printf("\n");
-    }
-
-    if (terrainMap->worldRow - 200 < 0) {
-        northMult = -1;
-        ns = 'S';
-    }
-    if (terrainMap->worldCol - 200 < 0) {
-        westMult = -1;
-        ew = 'W';
-    }
-
-    printf("Coords: %d%c %d%c\n", (terrainMap->worldRow - 200) * northMult, ns, (terrainMap->worldCol - 200) * westMult, ew);
 }
 
 struct terrainMap * generateTerrain(int *a, int *b, int firstGeneration, int numTrainers) {
@@ -585,7 +691,6 @@ struct terrainMap * generateTerrain(int *a, int *b, int firstGeneration, int num
     }
     decorateTerrain(terrainMap->terrain);
     placeCharacter(terrainMap);
-    displayMap(terrainMap);
     generateTrainers(terrainMap, numTrainers);
     // findPath(terrainMap, Rival);
     // findPath(terrainMap, Hiker);
@@ -594,12 +699,12 @@ struct terrainMap * generateTerrain(int *a, int *b, int firstGeneration, int num
 }
 
 int main(int argc, char *argv[]) {
-    char userInput[13];
+    // char userInput[13];
     int i, j;
-    int quit = 0;
-    char *move;
-    char *flyRow;
-    char *flyCol;
+    // int quit = 0;
+    // char *move;
+    // char *flyRow;
+    // char *flyCol;
     int currWorldRow = 200;
     int currWorldCol = 200;
     int numTrainers = 5; // Default number of trainers
@@ -614,59 +719,59 @@ int main(int argc, char *argv[]) {
     
     world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 1, numTrainers);
     
-    while (!quit) {
-        printf("~: ");
+    // while (!quit) {
+    //     printf("~: ");
 
-        fgets(userInput, 13, stdin);
-        move = strtok(userInput, " ");
-        flyRow = strtok(NULL, " ");
-        flyCol = strtok(NULL, " ");
+    //     fgets(userInput, 13, stdin);
+    //     move = strtok(userInput, " ");
+    //     flyRow = strtok(NULL, " ");
+    //     flyCol = strtok(NULL, " ");
         
-        if (*move == 'n') {
-            if (currWorldRow < 401) {
-                currWorldRow++;
-            }
-        } else if (*move == 's') {
-            if (currWorldRow > 0) {
-                currWorldRow--;
-            }
-        } else if (*move == 'w') {
-            if (currWorldCol > 0) {
-                currWorldCol--;
-            }
-        } else if (*move == 'e') {
-            if (currWorldCol < 401) {
-                currWorldCol++;
-            }
-        } else if (*move == 'f') {
-            if (flyRow != NULL 
-            && flyCol != NULL 
-            && (atoi(flyRow) + 200) < 401 
-            && (atoi(flyRow) + 200) >= 0 
-            && (atoi(flyCol) + 200) < 401
-            && (atoi(flyCol) + 200) >= 0) {
-                currWorldRow = atoi(flyRow) + 200;
-                currWorldCol = atoi(flyCol) + 200;
-            } else {
-                printf("\nIncompatible Fly Coordinates\n(Input Coordinates as an ordered pair separated by a space)\n");
-                continue;
-            }
-        } else if (*move == 'q') {
-            printf("Quitting...\n");
-            quit = 1;
-        } else {
-            printf("Unexpected input... Please try something else.\n");
-            continue;
-        }
+    //     if (*move == 'n') {
+    //         if (currWorldRow < 401) {
+    //             currWorldRow++;
+    //         }
+    //     } else if (*move == 's') {
+    //         if (currWorldRow > 0) {
+    //             currWorldRow--;
+    //         }
+    //     } else if (*move == 'w') {
+    //         if (currWorldCol > 0) {
+    //             currWorldCol--;
+    //         }
+    //     } else if (*move == 'e') {
+    //         if (currWorldCol < 401) {
+    //             currWorldCol++;
+    //         }
+    //     } else if (*move == 'f') {
+    //         if (flyRow != NULL 
+    //         && flyCol != NULL 
+    //         && (atoi(flyRow) + 200) < 401 
+    //         && (atoi(flyRow) + 200) >= 0 
+    //         && (atoi(flyCol) + 200) < 401
+    //         && (atoi(flyCol) + 200) >= 0) {
+    //             currWorldRow = atoi(flyRow) + 200;
+    //             currWorldCol = atoi(flyCol) + 200;
+    //         } else {
+    //             printf("\nIncompatible Fly Coordinates\n(Input Coordinates as an ordered pair separated by a space)\n");
+    //             continue;
+    //         }
+    //     } else if (*move == 'q') {
+    //         printf("Quitting...\n");
+    //         quit = 1;
+    //     } else {
+    //         printf("Unexpected input... Please try something else.\n");
+    //         continue;
+    //     }
 
-        if (world[currWorldRow][currWorldCol] == NULL) {
-            world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 0, numTrainers);
-        } else if (!quit){
-            displayMap(world[currWorldRow][currWorldCol]);
-        }
+    //     if (world[currWorldRow][currWorldCol] == NULL) {
+    //         world[currWorldRow][currWorldCol] = generateTerrain(&currWorldRow, &currWorldCol, 0, numTrainers);
+    //     } else if (!quit){
+    //         displayMap(world[currWorldRow][currWorldCol]);
+    //     }
 
-        printf("\n");
-    }
+    //     printf("\n");
+    // }
 
     for (i = 0; i < 401; i++) {
         for (j = 0; j < 401; j++) {
