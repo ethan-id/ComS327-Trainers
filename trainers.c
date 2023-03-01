@@ -34,7 +34,6 @@ typedef struct squares {
     char terrain;
 } squares_t;
 
-
 typedef struct player {
     int rowPos;
     int colPos;
@@ -534,21 +533,69 @@ void findPosition(character_t *trainer, terrainMap_t *terrainMap, int numTrainer
         }
 }
 
-int getMoveCost(terrainMap_t *terrainMap, int row, int pos, char npc) {
+int getMoveCost(terrainMap_t *terrainMap, int row, int col, char npc) {
     switch(npc) {
+        case '@' :
+            switch(terrainMap->terrain[row][col]) {
+                case '#' :
+                    return 10;
+                case 'M' :
+                    return 10;
+                case 'C' :
+                    return 10;
+                case ':' :
+                    return 20;
+                case '.' :
+                    return 10;
+                default :
+                    return INFINITY_T;
+            }
+            break;
         case 'h' :
-
+            switch(terrainMap->terrain[row][col]) {
+                case '#' :
+                    return 10;
+                case 'M' :
+                    return 50;
+                case 'C' :
+                    return 50;
+                case ':' :
+                    return 15;
+                case '.' :
+                    return 10;
+                default :
+                    return INFINITY_T;
+            }
             break;
         case 'r' :
-
+            switch(terrainMap->terrain[row][col]) {
+                case '#' :
+                    return 10;
+                case 'M' :
+                    return 50;
+                case 'C' :
+                    return 50;
+                case ':' :
+                    return 20;
+                case '.' :
+                    return 10;
+                default :
+                    return INFINITY_T;
+            }
             break;
         case 'm' :
-
+            switch(terrainMap->terrain[row][col]) {
+                case '~' :
+                    return 7;
+                default :
+                    return INFINITY_T;
+            }
             break;
         default :
 
             break;
     }
+    return INFINITY_T;
 }
 
 void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
@@ -575,6 +622,7 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
             trainers[i]->nextMoveTime = 0;
         } else {
             trainers[i]->npc = trainerOptions[rand() % 7];
+            // trainers[i]->npc = 'p'; //testing pacers
             trainers[i]->nextMoveTime = 0;
             // heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]);
         }
@@ -617,22 +665,26 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
         char value[20];
         char *npc;
         char *index;
-        // char *spawn;
+        long int moveCost = 0;
 
         // Deconstruct Value String
         strcpy(value, u.value);
         npc = strtok(value, " ");
         index = strtok(NULL, " ");
-
         int i = atoi(index);
 
-        switch(trainers[i]->npc) {
+        switch(*npc) {
             case '@' :
                 // handle player movement in 1.05
                 printf("Moved Player\n");
                 usleep(250000);
                 displayMap(terrainMap, numTrainers, trainers);
-                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
+                // moveCost = getMoveCost(terrainMap, (rand() % (16 - 3)) + 3, (rand() % (70 - 10)) + 10, trainers[i]->npc);
+                // if (moveCost < INFINITY_T) {
+                //     trainers[i]->nextMoveTime += moveCost;
+                // }
+                // heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+                printf("Inserted Player with nextMoveTime: %ld\n", trainers[i]->nextMoveTime);
                 break;
             case 'r' :
                 // path to player
@@ -655,6 +707,11 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                     && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != 'M'
                     && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != 'C') {
                         trainers[i]->position.colPos--;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos - 1, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos - 1, trainers[i]->npc);
                     } else {
                         trainers[i]->direction = Right;
                     }
@@ -667,6 +724,11 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                     && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != 'M'
                     && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != 'C') {
                         trainers[i]->position.colPos++;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos + 1, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos + 1, trainers[i]->npc);
                     } else {
                         trainers[i]->direction = Left;
                     }
@@ -679,6 +741,11 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                     && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != 'M'
                     && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != 'C') {
                         trainers[i]->position.rowPos++;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos + 1, trainers[i]->position.colPos, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos + 1, trainers[i]->position.colPos, trainers[i]->npc);
                     } else {
                         trainers[i]->direction = Up;
                     }
@@ -691,18 +758,100 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                     && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != 'M'
                     && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != 'C') {
                         trainers[i]->position.rowPos--;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos - 1, trainers[i]->position.colPos, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos - 1, trainers[i]->position.colPos, trainers[i]->npc);
                     } else {
                         trainers[i]->direction = Down;
                     }
                 }
                 printf("Moved Pacer\n");
+                usleep(250000);
                 displayMap(terrainMap, numTrainers, trainers);
-                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
+                heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+                printf("Inserted Pacer with nextMoveTime: %ld\n", trainers[i]->nextMoveTime);
                 break;
             case 'w' :
                 // move in direction until reach edge of spawn terrain then walk in random new direction
                 printf("Moved Wanderer\n");
-                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
+                if (trainers[i]->direction == Left) {
+                    if (terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] != 'C'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] == trainers[i]->spawn) {
+                        trainers[i]->position.colPos--;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos - 1, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos - 1, trainers[i]->npc);
+                    } else {
+                        trainers[i]->direction = directionOptions[rand() % 4];
+                    }
+                }
+                if (trainers[i]->direction == Right) {
+                    // move left if possible
+                    if (terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos + 1] != 'C'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] == trainers[i]->spawn) {
+                        trainers[i]->position.colPos++;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos + 1, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos + 1, trainers[i]->npc);
+                    } else {
+                        trainers[i]->direction = directionOptions[rand() % 4];
+                    }
+                }
+                if (trainers[i]->direction == Down) {
+                    // move left if possible
+                    if (terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos + 1][trainers[i]->position.colPos] != 'C'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] == trainers[i]->spawn) {
+                        trainers[i]->position.rowPos++;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos + 1, trainers[i]->position.colPos, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos + 1, trainers[i]->position.colPos, trainers[i]->npc);
+                    } else {
+                        trainers[i]->direction = directionOptions[rand() % 4];
+                    }
+                }
+                if (trainers[i]->direction == Up) {
+                    // move left if possible
+                    if (terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != '%'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != '^'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != '~'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != 'M'
+                    && terrainMap->terrain[trainers[i]->position.rowPos - 1][trainers[i]->position.colPos] != 'C'
+                    && terrainMap->terrain[trainers[i]->position.rowPos][trainers[i]->position.colPos - 1] == trainers[i]->spawn) {
+                        trainers[i]->position.rowPos--;
+                        moveCost = getMoveCost(terrainMap, trainers[i]->position.rowPos - 1, trainers[i]->position.colPos, trainers[i]->npc);
+                        if (moveCost < INFINITY_T) {
+                            trainers[i]->nextMoveTime += moveCost;
+                        }
+                        trainers[i]->nextMoveTime += getMoveCost(terrainMap, trainers[i]->position.rowPos - 1, trainers[i]->position.colPos, trainers[i]->npc);
+                    } else {
+                        trainers[i]->direction = directionOptions[rand() % 4];
+                    }
+                }
+                printf("Moved Wanderer\n");
+                usleep(250000);
+                displayMap(terrainMap, numTrainers, trainers);
+                heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
+                printf("Inserted Wanderer with nextMoveTime: %ld\n", trainers[i]->nextMoveTime);
                 break;
             case 's' :
                 // Sentries don't move
