@@ -32,7 +32,7 @@ typedef struct heap 18,322
     heap_entry* table;23,655
 } heap;24,727
 
-trainers.c,1663
+trainers.c,1698
 const int INFINITY_T 9,134
 const int NUM_VERTICES 10,169
 typedef struct position 12,212
@@ -88,6 +88,7 @@ int positionOccupied(434,13295
 void displayMap(445,13549
 void findPosition(482,14717
 int getMoveCost(536,17194
-void generateTrainers(601,18957
-struct terrainMap * generateTerrain(882,36115
-int main(925,37398
+int positionNotOccupied(599,18919
+void generateTrainers(611,19214
+struct terrainMap * generateTerrain(890,36030
+int main(933,37313
