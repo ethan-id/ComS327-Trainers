@@ -708,8 +708,6 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                 heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
                 break;
             case 'r' :
-                // path to player
-                // printf("Moved Rival\n");
                 position_t rivalMove = findPath(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos, trainers[i]);
                 trainers[i]->position.rowPos = rivalMove.rowPos;
                 trainers[i]->position.colPos = rivalMove.colPos;
@@ -718,11 +716,9 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                 if (moveCost < INFINITY_T) {
                     trainers[i]->nextMoveTime += moveCost;
                 }
-                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
+                heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
                 break;
-            case 'h' :
-                // path to player
-                // printf("Moved Hiker\n");
+            case 'h' :=
                 position_t hikerMove = findPath(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos, trainers[i]);
                 trainers[i]->position.rowPos = hikerMove.rowPos;
                 trainers[i]->position.colPos = hikerMove.colPos;
@@ -731,7 +727,7 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                 if (moveCost < INFINITY_T) {
                     trainers[i]->nextMoveTime += moveCost;
                 }
-                // heap_insert(&characterHeap, &trainerToInsert->nextMoveTime, &trainerToInsert->npc);
+                heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
                 break;
             case 'p' :
                 if (trainers[i]->direction == Left) {
@@ -991,8 +987,6 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
             default :
                 break;
         }
-
-        // printf("Inserted\n");
     }
 
     heap_destroy(&characterHeap);
