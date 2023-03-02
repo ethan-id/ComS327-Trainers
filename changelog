@@ -27,4 +27,18 @@
         Added getMoveCost() and starting to work on implementing the movement patterns of each trainer
         Fixed findPosition to now allow trainers to spawn on poke centers
         Started to reinsert trainers and players into queue for turns, code is looping as expected now.
-    4:24pm-
+    4:24pm-5:21pm
+        added positionNotOccupied() to help check movement possibility for trainers
+        Pacers movement implemented and working, working on wanderer.
+    5:22pm-5:43pm
+        Got a little stuck on bounding wanderers' movements properly, got the easy part of swimmers movements done instead.
+            Swimmers dont path to the player yet but do swim around the water properly
+    5:43pm-5:46pm
+        Fixed wanderer movements
+            simple mistake when verifying the position the wanderer was trying to move to was actually the right position.
+                e.g trying to move to [rowPos - 1][colPos] but checking that [rowPos][colPos - 1] was possible.
+    5:46pm-6:11pm
+        Implemented explorer movements
+        All trainer movement is now implemented excluding hiker, rival, and the part of swimmers that paths to the player
+    6:11pm-7:51pm
+        Finishing up README and changelog for submission
