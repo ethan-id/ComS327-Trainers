@@ -718,7 +718,7 @@ void generateTrainers(terrainMap_t *terrainMap, int numTrainers) {
                 }
                 heap_insert(&characterHeap, &trainers[i]->nextMoveTime, &trainers[i]->npc);
                 break;
-            case 'h' :=
+            case 'h' :
                 position_t hikerMove = findPath(terrainMap, trainers[i]->position.rowPos, trainers[i]->position.colPos, trainers[i]);
                 trainers[i]->position.rowPos = hikerMove.rowPos;
                 trainers[i]->position.colPos = hikerMove.colPos;
